@@ -7,9 +7,18 @@ A simple web app where you upload documents and then **talk** to an animated ava
 - **Voice**: you speak into the mic; the avatar answers out loud.
 - **Streamlit**: turns a plain Python script into a web page, with no HTML or JavaScript needed (except for the small avatar).
 
+### Two apps, two labs
+
+| App | Run | What it shows | Start here if… |
+|---|---|---|---|
+| **Ask your PDF** (`ask_pdf.py`) | `streamlit run ask_pdf.py` | Upload one PDF, type a question, read the answer. ~100 lines. | You’re new to RAG. Do this one first. |
+| **Voice RAG Avatar** (`app.py`) | `streamlit run app.py` | Several documents, voice in, spoken answer from an animated avatar, chat memory. | You finished the PDF lab. |
+
+Both use the same setup, `.env` file and packages. See [Lab 1: Ask your PDF](#lab-1-ask-your-pdf) for the simpler app; the rest of this README describes the avatar app.
+
 ---
 
-## How it works
+## How the Voice RAG Avatar works
 
 ### The big picture
 
@@ -87,13 +96,15 @@ flowchart LR
 
 ```text
 furhat-rag/
-├── app.py              # the whole app
-├── requirements.txt    # Python packages to install
+├── ask_pdf.py          # Lab 1: simple Ask your PDF app
+├── app.py              # Lab 2: Voice RAG Avatar app
+├── requirements.txt    # Python packages to install (shared by both)
 ├── .env.example        # template for your secrets file
 ├── .env                # YOUR secrets file (you create it; never committed)
 ├── .gitignore          # tells git to ignore .env, .venv, caches
 ├── docs/
-│   └── flower_shop.txt # sample document to try
+│   ├── constitution.pdf # sample PDF for Lab 1
+│   └── flower_shop.txt  # sample document for Lab 2
 └── README.md
 ```
 
@@ -282,7 +293,62 @@ You only do the setup once. Next time, just activate the environment and run:
 
 ---
 
-## Using the app
+## Lab 1: Ask your PDF
+
+The simplest possible RAG app: one PDF, one question box, one answer. Every step is a short, plain Python function, with no LangChain or vector database to learn first.
+
+```bash
+streamlit run ask_pdf.py
+```
+
+1. Upload `docs/constitution.pdf` (or any PDF with real text in it).
+2. Ask *“Who can be a representative?”* and read the answer and its `[1]`, `[2]` citations.
+3. Open **Sources** to see the exact chunks the model was given.
+4. Ask something that isn’t in the document, e.g. *“What is the capital of France?”*. It should say it doesn’t know.
+
+```mermaid
+flowchart LR
+    P[📄 PDF] --> X[extract_text<br/>pypdf]
+    X --> S[split_chunks<br/>1000 chars, 200 overlap]
+    S --> E[embed<br/>Embeddings API]
+    E --> I[(vectors<br/>cached per file)]
+    Q[❓ Question] --> QE[embed]
+    QE --> R[top 4 by<br/>cosine similarity]
+    I --> R
+    R --> A[answer<br/>Responses API]
+    A --> O[💬 Answer + sources<br/>+ token count]
+```
+
+| Function | What it does |
+|---|---|
+| `extract_text` | Reads the text of every page with `pypdf` |
+| `split_chunks` | Cuts the text into 1000-character pieces that overlap by 200, so a sentence on a boundary appears whole in at least one chunk |
+| `embed` | Turns texts into vectors with `client.embeddings.create` |
+| `build_index` | Runs the three steps above once per file. `@st.cache_data` remembers the result, so asking a second question doesn’t re-embed the PDF |
+| `answer` | Embeds the question, picks the 4 closest chunks and asks the model with `client.responses.create` |
+
+**Things to try:** change `CHUNK_SIZE`, `CHUNK_OVERLAP` or `TOP_K` at the top of the file and see how answers change; edit the `instructions` to change the tone; watch the token count grow as `TOP_K` goes up.
+
+<details>
+<summary>How this differs from the original ask-pdf example</summary>
+
+`ask_pdf.py` is a rewrite of the [ask-pdf](https://github.com/iportilla/ask-pdf) demo, updated to the current OpenAI Python SDK and simplified for a lab:
+
+| Original | Here | Why |
+|---|---|---|
+| LangChain `load_qa_chain` (“stuff” chain) | `client.responses.create(...)` | `load_qa_chain` is deprecated and gone in LangChain 1.0. The Responses API is OpenAI’s current API for generating text. |
+| `ChatOpenAI` / `OpenAIEmbeddings` wrappers | `openai` SDK directly | One less library between you and the API |
+| FAISS vector store | numpy dot product | For one PDF, a matrix multiply is instant and needs no extra install (FAISS can be awkward on Windows) |
+| `PyPDF2` | `pypdf` | PyPDF2 is deprecated; `pypdf` is its maintained successor |
+| `get_openai_callback()` for token usage | `resp.usage` | The Responses API returns usage directly |
+| Re-embedded the PDF on every question | `@st.cache_data` | Faster and cheaper |
+| OpenAI, Azure and Ollama providers; `.xlsx` support | OpenAI only, PDF only | Kept small for a first lab |
+
+</details>
+
+---
+
+## Lab 2: Using the Voice RAG Avatar
 
 1. In the sidebar, upload `.txt`, `.md` or `.pdf` files (try `docs/flower_shop.txt`) and click **Ingest**.
 2. Click the 🎤 mic, ask e.g. *"When are you open on weekends?"*, then click stop.
