@@ -14,6 +14,8 @@ A simple web app where you upload documents and then **talk** to an animated ava
 | **Ask your PDF** (`ask_pdf.py`) | `streamlit run ask_pdf.py` | Upload one PDF, type a question, read the answer. ~100 lines. | You’re new to RAG. Do this one first. |
 | **Voice RAG Avatar** (`app.py`) | `streamlit run app.py` | Several documents, voice in, spoken answer from an animated avatar, chat memory. | You finished the PDF lab. |
 
+📊 **Lab slides:** [slides/voice-rag-avatar-lab.pdf](slides/voice-rag-avatar-lab.pdf), with speaker notes in [slides/README.md](slides/README.md).
+
 Both use the same setup, `.env` file and packages. See [Lab 1: Ask your PDF](#lab-1-ask-your-pdf) for the simpler app; the rest of this README describes the avatar app.
 
 ---
@@ -102,6 +104,7 @@ furhat-rag/
 ├── .env.example        # template for your secrets file
 ├── .env                # YOUR secrets file (you create it; never committed)
 ├── .gitignore          # tells git to ignore .env, .venv, caches
+├── slides/              # lab slides (PDF, web page, speaker notes)
 ├── docs/
 │   ├── constitution.pdf # sample PDF for Lab 1
 │   └── flower_shop.txt  # sample document for Lab 2

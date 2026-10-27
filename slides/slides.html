@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice RAG Avatar Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  @page { size: 1920px 1080px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #2B2F36; }
+  h1, h2, h3, p, table { margin: 0; }
+  .slide { position: relative; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; }
+  .slide aside { display: none; }
+  .slide table { border-collapse: collapse; width: 100%; }
+  .slide th, .slide td { padding: 0.35em 0.6em; text-align: left; border-bottom: 1px solid #D9D3C7; }
+  .slide th { font-weight: 600; border-bottom: 2px solid #14213D; }
+  .frame { width: min(100vw - 32px, 1280px); aspect-ratio: 16 / 9; margin: 16px auto; overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,.35); }
+  @media print {
+    html, body { background: none; }
+    .frame { width: 1920px; height: 1080px; margin: 0; box-shadow: none; break-after: page; }
+    .slide { transform: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="frame"><section class="slide" id="cover" data-transition="fade" style="background:#14213D;color:#F7F5F0;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:32px">
+<svg aria-label="Cartoon avatar face speaking, with sound waves" width="676" height="520" viewBox="0 0 260 200" style="position:absolute;right:96px;top:280px;width:676px;height:520px" xmlns="http://www.w3.org/2000/svg">
+<circle cx="100" cy="100" r="90" fill="#FFD8B1" stroke="#C98B5A" stroke-width="3"/>
+<path d="M20 85 Q100 -10 180 85 Q150 40 100 45 Q50 40 20 85Z" fill="#6B3E26"/>
+<circle cx="70" cy="95" r="9" fill="#333333"/>
+<circle cx="130" cy="95" r="9" fill="#333333"/>
+<ellipse cx="100" cy="145" rx="26" ry="14" fill="#AA3333"/>
+<path d="M205 75 Q220 100 205 125" fill="none" stroke="#E8743B" stroke-width="6" stroke-linecap="round"/>
+<path d="M222 60 Q245 100 222 140" fill="none" stroke="#E8743B" stroke-width="6" stroke-linecap="round"/>
+</svg>
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#F08A4B">Lab E · Furhat GenAI lab</p>
+<div style="display:flex;flex-direction:column;gap:32px;width:1000px">
+<h1 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:120px;font-weight:700;line-height:1.05;color:#F7F5F0">Voice RAG Avatar</h1>
+<p style="font-size:44px;line-height:1.3;color:#C9D3E6">Talk to your documents with Streamlit and OpenAI</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#C9D3E6">github.com/iportilla/furhat-rag</p>
+<aside>Welcome. In this lab we build a small web app that lets you upload documents and then ask questions about them out loud. An animated avatar answers by voice, using only what is in your documents. Everything is in one Python file, so you can read all of it in a single sitting.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="goals" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">The goal</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">What you’ll build in 45 minutes</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:40px">
+<svg width="56" height="56" viewBox="0 0 28 28" style="flex:none;color:#2F6DB5"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z M24 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600;line-height:1.15">Ingest documents</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">Upload .txt, .md or .pdf files. The app splits and indexes them.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:40px">
+<svg width="56" height="56" viewBox="0 0 28 28" style="flex:none;color:#2F6DB5"><path d="M4 5h20v13H12l-6 5v-5H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600;line-height:1.15">Ask by voice</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">Record a question. It’s transcribed and matched to your documents.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:40px">
+<svg width="56" height="56" viewBox="0 0 28 28" style="flex:none;color:#2F6DB5"><circle cx="14" cy="14" r="11" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 9l8 5-8 5z" fill="currentColor"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600;line-height:1.15">Hear the answer</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">An avatar speaks a grounded answer and shows its sources.</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:16px;align-items:center">
+<p style="font-size:32px;font-weight:600;color:#14213D">You’ll learn:</p>
+<p style="font-size:24px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:999px">RAG</p>
+<p style="font-size:24px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:999px">Embeddings</p>
+<p style="font-size:24px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:999px">Speech-to-text</p>
+<p style="font-size:24px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:999px">Text-to-speech</p>
+<p style="font-size:24px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:999px">Streamlit state</p>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">02</p>
+</div>
+<aside>Three things happen in this app: you feed it documents, you ask a question with your voice, and an avatar answers out loud. Along the way you will touch five ideas that show up in almost every voice assistant: retrieval-augmented generation, embeddings, speech-to-text, text-to-speech, and how Streamlit keeps state.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="why-rag" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Concepts</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Why retrieval matters</h2>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">Question: <b style="color:#14213D">“When are you open on weekends?”</b></p>
+<div style="display:flex;flex-direction:row;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:40px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6A7085">Without RAG</p>
+<p style="font-size:32px;line-height:1.4;color:#14213D">“Most flower shops open around 9am on Saturdays…”</p>
+<p style="font-size:24px;line-height:1.4;color:#4A5568">A confident guess. The model has never seen your shop.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:3px solid #2F6DB5;border-radius:20px;padding:40px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#2F6DB5">With RAG</p>
+<p style="font-size:32px;line-height:1.4;color:#14213D">“We’re open 10am to 4pm on weekends, according to flower_shop.txt.”</p>
+<p style="font-size:24px;line-height:1.4;color:#4A5568">Grounded in your document, and it names the source.</p>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#14213D"><b>RAG</b> = find the relevant pieces of your documents, then let the model answer <b>only</b> from them.</p>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">03</p>
+</div>
+<aside>A language model only knows what it saw in training. Ask it about your flower shop and it will happily invent plausible hours. Retrieval-augmented generation fixes that: before asking the model, we search our own documents for the most relevant passages and paste them into the prompt with an instruction to answer only from them, and to say “I don’t know” otherwise.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="pipeline" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Concepts</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">The big picture</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#2F6DB5">1 · Ingest, once per upload</p>
+<div style="display:flex;flex-direction:row;gap:16px;align-items:center">
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 16px"><p style="font-size:28px;font-weight:600;text-align:center">Your files</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 16px"><p style="font-size:28px;font-weight:600;text-align:center">Extract text</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 16px"><p style="font-size:28px;font-weight:600;text-align:center">Chunk</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 16px"><p style="font-size:28px;font-weight:600;text-align:center">Embed</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#14213D;border-radius:16px;padding:24px 16px"><p style="font-size:28px;font-weight:600;text-align:center;color:#F7F5F0">Index</p></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#2F6DB5">2 · Ask, every question</p>
+<div style="display:flex;flex-direction:row;gap:16px;align-items:center">
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 12px"><p style="font-size:28px;font-weight:600;text-align:center">Mic</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 12px"><p style="font-size:28px;font-weight:600;text-align:center">Transcribe</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#14213D;border-radius:16px;padding:24px 12px"><p style="font-size:28px;font-weight:600;text-align:center;color:#F7F5F0">Retrieve</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 12px"><p style="font-size:28px;font-weight:600;text-align:center">Answer</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 12px"><p style="font-size:28px;font-weight:600;text-align:center">Speak</p></div>
+<svg width="48" height="24" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:16px;padding:24px 12px"><p style="font-size:28px;font-weight:600;text-align:center">Avatar</p></div>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#4A5568"><b style="color:#14213D">Retrieve</b> searches the <b style="color:#14213D">Index</b> built in step 1. That link is the whole trick.</p>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">04</p>
+</div>
+<aside>The app has two pipelines. Ingest runs once when you click the Ingest button: read the files, split them into chunks of about 300 words, turn each chunk into an embedding vector, and keep them in memory as the index. The ask pipeline runs on every question: record, transcribe, retrieve from the index, answer, turn the answer into speech, and play it through the avatar. The dark boxes show where the two pipelines meet.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="retrieval" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Concepts</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">How the app finds the right chunks</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:64px">
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:32px;line-height:1.4;color:#4A5568">An <b style="color:#14213D">embedding</b> is a list of numbers that captures what a text means. Similar meaning gives vectors that point the same way.</p>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:700;color:#2F6DB5">1</p>
+<p style="font-size:28px;line-height:1.4">Ingest stores one vector per chunk.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:700;color:#2F6DB5">2</p>
+<p style="font-size:28px;line-height:1.4">Your question becomes a vector the same way.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:700;color:#2F6DB5">3</p>
+<p style="font-size:28px;line-height:1.4"><b>Cosine similarity</b> scores every chunk; the top 4 go to the model.</p>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:40px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6A7085">“Open on weekends?”</p>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:26px;color:#14213D">
+<tr><th style="width:20%">Score</th><th style="width:50%">Chunk</th><th style="width:30%">Result</th></tr>
+<tr><td>0.82</td><td>shop hours</td><td style="color:#1F6B3A">Used</td></tr>
+<tr><td>0.47</td><td>delivery terms</td><td style="color:#1F6B3A">Used</td></tr>
+<tr><td>0.31</td><td>rose care</td><td style="color:#1F6B3A">Used</td></tr>
+<tr><td>0.12</td><td>tulip season</td><td style="color:#8A4B12">Not used</td></tr>
+</table>
+<p style="font-size:24px;line-height:1.4;color:#4A5568">Illustrative scores. In code: <span style="color:#14213D">vectors @ question</span> in top_k().</p>
+</div>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">05</p>
+</div>
+<aside>Embeddings map text into a space where meaning becomes geometry. We use OpenAI’s text-embedding-3-small. Because the app normalises every vector to length 1, cosine similarity is just a dot product, so scoring every chunk is a single matrix multiplication: vectors @ question. The table shows illustrative scores; with k = 4 the four best chunks are used even when some are only loosely related, which is why the prompt also says to answer only from relevant context.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="one-question" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Inside the app</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">One question, step by step</h2>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">STEP 1</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600">Record</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">You click the mic and ask. Streamlit’s st.audio_input captures it.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">STEP 2</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600">Transcribe</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">The audio is sent to OpenAI and comes back as text.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">STEP 3</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600">Retrieve</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">The question is embedded and the top 4 chunks are picked.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">STEP 4</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600">Answer</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">Prompt = rules + chunks + recent chat + question.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">STEP 5</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600">Speak</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">The answer text is turned into MP3 audio.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#14213D;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#F08A4B">STEP 6</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:600;color:#F7F5F0">Avatar</h3>
+<p style="font-size:28px;line-height:1.4;color:#C9D3E6">The audio plays; the mouth opens with the volume.</p>
+</div>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">06</p>
+</div>
+<aside>Walk through one round trip. Four of the six steps are OpenAI API calls: transcribe, embed the question, chat completion, and text-to-speech. Step 4 also sends the last few turns of the conversation, which is why a follow-up like “and on Mondays?” works. The avatar is a small SVG face; a bit of JavaScript reads the audio volume with the Web Audio API and stretches the mouth.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="models" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Inside the app</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Four OpenAI models, four jobs</h2>
+</div>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:30px;color:#14213D">
+<tr><th style="width:16%">Step</th><th style="width:34%">Model</th><th style="width:25%">Input</th><th style="width:25%">Output</th></tr>
+<tr><td>Transcribe</td><td>gpt-4o-mini-transcribe</td><td>Mic audio</td><td>Question text</td></tr>
+<tr style="background:#EFEBE3"><td>Embed</td><td>text-embedding-3-small</td><td>Chunks, question</td><td>Vectors</td></tr>
+<tr><td>Answer</td><td>gpt-4o-mini</td><td>Question + top 4</td><td>Short answer</td></tr>
+<tr style="background:#EFEBE3"><td>Speak</td><td>gpt-4o-mini-tts</td><td>Answer text</td><td>MP3 audio</td></tr>
+</table>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">All four names sit at the top of <b style="color:#14213D">app.py</b>. Change one line to try a different model.</p>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">07</p>
+</div>
+<aside>Each step uses a small, cheap model, which keeps a class session to a few cents per student. The constants CHAT_MODEL, EMBED_MODEL, STT_MODEL and TTS_MODEL are defined at the top of app.py. One caveat: if you change the embedding model you must ingest again, because vectors from different models can’t be compared.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="rerun" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Inside the app</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Streamlit re-runs your whole script</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:24px;align-items:center">
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:36px"><p style="font-size:32px;line-height:1.35;text-align:center">You click, type or record</p></div>
+<svg width="64" height="32" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:36px"><p style="font-size:32px;line-height:1.35;text-align:center">app.py runs again from the top</p></div>
+<svg width="64" height="32" viewBox="0 0 100 50" preserveAspectRatio="none" style="flex:none"><path d="M0 15H60V0L100 25L60 50V35H0Z" fill="#E8743B"/></svg>
+<div style="flex:1;background:#14213D;border-radius:20px;padding:36px"><p style="font-size:32px;line-height:1.35;text-align:center;color:#F7F5F0">Only <b>st.session_state</b> survives</p></div>
+</div>
+<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:16px;align-items:center">
+<p style="font-size:32px;font-weight:600">Kept in state:</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:12px">chunks</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:12px">vectors</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:12px">messages</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:12px">reply_audio</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;background:#E7EEF7;color:#1F4E85;padding:8px 20px;border-radius:12px">last_audio</p>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">That’s why the app hashes each recording: the same clip stays in the mic widget across re-runs and must not be transcribed twice.</p>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">08</p>
+</div>
+<aside>This is the one Streamlit idea that surprises everyone. There is no event loop to write: every interaction re-executes the script from line one. Normal variables are recreated each time, so anything that must persist — the index, the chat history, the last reply’s audio — lives in st.session_state. After a new answer the app calls st.rerun() so the avatar redraws with the new audio.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="code-tour" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Inside the app</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">A tour of app.py, top to bottom</h2>
+</div>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:28px;color:#14213D">
+<tr><th style="width:22%">Section</th><th style="width:38%">Functions</th><th style="width:40%">What it does</th></tr>
+<tr><td>Settings</td><td>CHAT_MODEL, EMBED_MODEL…</td><td>Model names, easy to swap</td></tr>
+<tr style="background:#EFEBE3"><td>Ingest</td><td>read_file, split_chunks, embed</td><td>Files → chunks → vectors</td></tr>
+<tr><td>Retrieve + answer</td><td>top_k, answer</td><td>Best chunks → grounded prompt</td></tr>
+<tr style="background:#EFEBE3"><td>Voice</td><td>transcribe, speak</td><td>Speech-to-text, text-to-speech</td></tr>
+<tr><td>Avatar</td><td>avatar</td><td>SVG face + lip-sync JavaScript</td></tr>
+<tr style="background:#EFEBE3"><td>UI</td><td>end of file</td><td>Sidebar, mic, chat history</td></tr>
+</table>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">About 200 lines in one file. Read it in the same order as the pipeline.</p>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">09</p>
+</div>
+<aside>Open app.py next to this slide. The file is deliberately flat: plain functions, no classes, in the same order as the diagram. If you only have five minutes, read answer() — that is where the system prompt lives and where retrieval meets the language model.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="setup" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Hands-on</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Setup in six commands</h2>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;background:#14213D;color:#F7F5F0;padding:24px 32px;border-radius:16px">git clone https://github.com/iportilla/furhat-rag.git</p>
+<div style="display:flex;flex-direction:row;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#14213D;border-radius:16px;padding:32px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#F08A4B">macOS / Linux</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;line-height:1.6;color:#F7F5F0">cd furhat-rag<br>python3 -m venv .venv<br>source .venv/bin/activate<br>pip install -r requirements.txt<br>cp .env.example .env<br>streamlit run app.py</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#14213D;border-radius:16px;padding:32px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#F08A4B">Windows (PowerShell)</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;line-height:1.6;color:#F7F5F0">cd furhat-rag<br>py -m venv .venv<br>.venv\Scripts\Activate.ps1<br>pip install -r requirements.txt<br>copy .env.example .env<br>streamlit run app.py</p>
+</div>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">10</p>
+</div>
+<aside>The virtual environment keeps this project’s packages separate from everything else on your machine; your prompt shows (.venv) when it is active. On Windows, if activation says scripts are disabled, run Set-ExecutionPolicy -Scope CurrentUser RemoteSigned once. In the old Command Prompt, activate with .venv\Scripts\activate.bat instead. Before running the app you must put your key in .env — that is the next slide.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="env-file" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Hands-on</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Your key lives in .env, not in code</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:48px">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#14213D;border-radius:16px;padding:32px">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;color:#F08A4B">.env  ·  next to app.py</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#F7F5F0">OPENAI_API_KEY=sk-proj-…</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:700;color:#2F6DB5">1</p>
+<p style="font-size:28px;line-height:1.4">Create a key at platform.openai.com/api-keys. Copy it: it’s shown once.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:700;color:#2F6DB5">2</p>
+<p style="font-size:28px;line-height:1.4">Copy .env.example to .env and paste the key after the =.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:700;color:#2F6DB5">3</p>
+<p style="font-size:28px;line-height:1.4">Save, then restart the app with Ctrl+C and streamlit run app.py.</p>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:26px;color:#14213D">
+<tr><th style="width:50%">Do</th><th style="width:50%">Don’t</th></tr>
+<tr><td>KEY=sk-…</td><td>KEY = sk-… (spaces)</td></tr>
+<tr style="background:#EFEBE3"><td>Name it .env</td><td>.env.txt or env</td></tr>
+<tr><td>Same folder as app.py</td><td>In docs/ or a parent</td></tr>
+<tr style="background:#EFEBE3"><td>Check git status first</td><td>Commit or share it</td></tr>
+</table>
+<p style="font-size:24px;line-height:1.4;color:#4A5568">Windows: Notepad may add .txt. Turn on View › File name extensions to see it.</p>
+</div>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">11</p>
+</div>
+<aside>Secrets never go in source code, because source code ends up on GitHub. The app calls load_dotenv() at startup, which reads .env and sets OPENAI_API_KEY for the OpenAI library. The repo’s .gitignore already lists .env, but always glance at git status before committing. Quick check from the terminal: python -c "from dotenv import load_dotenv; import os; load_dotenv(); print(bool(os.getenv('OPENAI_API_KEY')))" should print True. If a key leaks, delete it on the OpenAI keys page straight away.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="lab-steps" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Hands-on</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Your turn: run the lab</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">1 · INGEST</p>
+<p style="font-size:28px;line-height:1.4">Upload docs/flower_shop.txt and click Ingest.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">2 · ASK</p>
+<p style="font-size:28px;line-height:1.4">Click the mic, ask a question, click stop.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">3 · CHECK</p>
+<p style="font-size:28px;line-height:1.4">Open Sources to see which chunks were used.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:24px;font-weight:700;color:#B94E17">4 · FOLLOW UP</p>
+<p style="font-size:28px;line-height:1.4">Ask “And on Mondays?” to test memory.</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-size:32px;font-weight:600">Questions to try</p>
+<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:16px">
+<p style="font-size:28px;background:#E7EEF7;color:#1F4E85;padding:12px 24px;border-radius:999px">When are you open on weekends?</p>
+<p style="font-size:28px;background:#E7EEF7;color:#1F4E85;padding:12px 24px;border-radius:999px">Do you deliver, and how much?</p>
+<p style="font-size:28px;background:#E7EEF7;color:#1F4E85;padding:12px 24px;border-radius:999px">How do I care for roses?</p>
+<p style="font-size:28px;background:#FBE6D9;color:#8A3A10;padding:12px 24px;border-radius:999px">How much are orchids? (should say “I don’t know”)</p>
+</div>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">12</p>
+</div>
+<aside>Give students about 15 minutes here. The orange question is the most important one: orchids are not in the document, so a well-grounded assistant should say it does not know rather than invent a price. If it does invent one, that is a great discussion about prompt wording. Then have students upload their own document — a syllabus or a product manual works well.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="challenges" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Going further</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Stretch challenges</h2>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600">Give it a personality</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Rewrite the system prompt in answer().</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600">Tune retrieval</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Change k, chunk_size and overlap. What breaks?</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600">Measure latency</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Time each step from question to speech.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600">Keep the index</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Save vectors with np.save; load at startup.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF9;border:1px solid #E4DFD5;border-radius:20px;padding:32px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600">Go offline</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Swap OpenAI for Ollama chat and embed.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#14213D;border-radius:20px;padding:32px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;color:#F7F5F0">Put it on Furhat</h3>
+<p style="font-size:26px;line-height:1.4;color:#C9D3E6">Send the answer to request_speak_text().</p>
+</div>
+</div>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">13</p>
+</div>
+<aside>For fast finishers. Tuning retrieval is the most instructive: tiny chunks lose context, huge chunks dilute the match. Latency connects to the KPIs from the earlier labs: transcribe, answer and speech each add time. The last card ties back to the robot: RAG answers can be spoken by Furhat through the Realtime API, using request_speak_text from the async bridge in the earlier labs, with the avatar replaced by the robot’s own face.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="troubleshooting" data-transition="fade" style="background:#F7F5F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:112px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#B94E17">Going further</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">When something breaks</h2>
+</div>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:28px;color:#14213D">
+<tr><th style="width:42%">You see</th><th style="width:58%">Try this</th></tr>
+<tr><td>“Set OPENAI_API_KEY…”</td><td>.env missing, misnamed, or in the wrong folder</td></tr>
+<tr style="background:#EFEBE3"><td>No module named streamlit</td><td>Activate the venv, then pip install again</td></tr>
+<tr><td>Mic button does nothing</td><td>Allow the mic in the browser; use localhost</td></tr>
+<tr style="background:#EFEBE3"><td>Avatar is silent</td><td>Autoplay blocked: press ▶ under the face</td></tr>
+<tr><td>401 or 429 error</td><td>Bad key, or add billing credit</td></tr>
+<tr style="background:#EFEBE3"><td>“I don’t know” for known facts</td><td>Ingest again after a reload; scanned PDFs have no text</td></tr>
+</table>
+<div style="position:absolute;left:128px;right:128px;bottom:64px;display:flex;flex-direction:row;justify-content:space-between">
+<p style="font-size:24px;color:#6A7085">Voice RAG Avatar · Lab E</p>
+<p style="font-size:24px;color:#6A7085">14</p>
+</div>
+<aside>These six cover almost every problem seen in class. The index lives in memory, so reloading the page empties it; students often forget to click Ingest again. Scanned PDFs are pictures of text, so pypdf extracts nothing from them. The full troubleshooting table, with Windows specifics, is in the README.</aside>
+</section>
+</div>
+<div class="frame"><section class="slide" id="wrap" data-transition="fade" style="background:#14213D;color:#F7F5F0;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#F08A4B">Wrap-up</p>
+<h1 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:120px;font-weight:700;line-height:1.05;color:#F7F5F0">Retrieve. Answer. <span style="color:#F08A4B">Speak.</span></h1>
+<p style="font-size:44px;line-height:1.3;color:#C9D3E6;width:1300px">Grounded answers from your own documents, by voice, in about 200 lines of Python.</p>
+<div style="display:flex;flex-direction:row;gap:48px;align-items:center">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#F7F5F0">github.com/iportilla/furhat-rag</p>
+<p style="font-size:32px;font-weight:600;color:#F08A4B">Questions?</p>
+</div>
+<aside>Recap: retrieval keeps the model honest, embeddings make retrieval possible, and speech in and out turns a chatbot into a conversation partner. The same three steps are what you will plug into the Furhat robot. Everything — code, README, setup for Mac and Windows — is in the repo.</aside>
+</section>
+</div>
+<script>
+  // Scale each 1920x1080 slide to fit its frame on screen
+  function fit() {
+    document.querySelectorAll('.frame').forEach(f => {
+      f.firstElementChild.style.transform = 'scale(' + f.clientWidth / 1920 + ')';
+    });
+  }
+  addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
